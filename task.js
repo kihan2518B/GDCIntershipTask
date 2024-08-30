@@ -103,7 +103,7 @@ function handleListTask() {
     }
 }
 
-// Handle Delete of the task
+//function to Handle Delete a task
 function handleDeleteTask(args) {
     const index = parseInt(args[0], 10)
     // console.log("index: ", index);
@@ -154,6 +154,97 @@ function handleDeleteTask(args) {
     }
 }
 
+//Function to mark a task as completed
+function handleMarkAsDone(args) {
+    const index = parseInt(args[0], 10)
+    // console.log("index: ", index);
+
+    if (!args[0]) {
+        console.log("Error: Missing NUMBER for marking tasks as done.");
+        return;
+    }
+
+    //First reading the file
+    let pendingTasks = [];
+    let completedTasks = [];
+    try {
+
+        if (fs.existsSync(TasksFilePath)) {//Check for the file if it exists or not
+            const fileContent = fs.readFileSync(TasksFilePath, 'utf-8');
+            pendingTasks = fileContent
+                .split("\n")
+                .filter(line => line.trim() != '')
+                .map(line => {
+                    const [p, ...t] = line.split(" ") //Spliting Priority and task by space
+                    return { priority: parseInt(p, 10), task: t.join(' ') };
+                });
+        }
+        if (fs.existsSync(CompletedTasksFilePath)) {
+            const fileContent = fs.readFileSync(CompletedTasksFilePath, 'utf-8');
+            completedTasks = fileContent
+                .split("\n")
+                .filter(line => line.trim() != '')
+                .map(line => {
+                    const [p, ...t] = line.split(" ") //Spliting Priority and task by space
+                    return { priority: parseInt(p, 10), task: t.join(' ') };
+                });
+        }
+    } catch (error) {
+        console.log("Error while Reading File: ", error);
+    }
+
+    //Checks for non existing tasks
+    if (index == 0 || index > pendingTasks.length) {
+        console.log(`Error: no incomplete item with index #${index} exists.`);
+        return;
+    }
+
+
+    //Adding required task to completed.txt file
+    // Insert the new task at the correct position
+    let added = false;
+    const currentTask = pendingTasks[index - 1];
+
+    for (let i = 0; i < completedTasks.length; i++) {
+        if (currentTask.priority < completedTasks[i].priority) {
+            completedTasks.splice(i, 0, { priority: currentTask.priority, task: currentTask.task });
+            added = true;
+            break;
+        }
+    }
+
+    // If the task wasn't added, add it at the end
+    if (!added) {
+        completedTasks.push({ priority: currentTask.priority, task: currentTask.task });
+    }
+
+    try {
+        const UpdatedCompletedTasksContent = completedTasks
+            .map(t => `${t.priority} ${t.task}`)
+            .join('\n');
+
+        //overwritting the completed.txt file with updated content
+        fs.writeFileSync(CompletedTasksFilePath, UpdatedCompletedTasksContent);
+        console.log(`Marked item as done.`)
+    } catch (error) {
+        console.log("Error while adding task to file: ", error);
+    }
+
+    //Filtering task and removing the task from task.txt with required index
+    const newTasks = pendingTasks.filter((task, idx) => idx != index - 1);
+
+    //Converting newtasks array to the formate of task to write in the file
+    const UpdatedPendingTasksContent = newTasks
+        .map(t => `${t.priority} ${t.task}`)
+        .join('\n');
+
+    try {
+        //Overwritting the file with updated content
+        fs.writeFileSync(TasksFilePath, UpdatedPendingTasksContent);
+    } catch (error) {
+        console.log("Error while adding task to file: ", error);
+    }
+}
 
 //This function will handle the input from the CLI
 function handleCLICommands(command, args) {
@@ -173,6 +264,9 @@ function handleCLICommands(command, args) {
             break;
         case "del":
             handleDeleteTask(args);
+            break;
+        case "done":
+            handleMarkAsDone(args);
             break;
         default:
             console.log('Usage :-\n$ ./task add 2 hello world    # Add a new item with priority 2 and text "hello world" to the list\n$ ./task ls                   # Show incomplete priority list items sorted by priority in ascending order\n$ ./task del INDEX            # Delete the incomplete item with the given index\n$ ./task done INDEX           # Mark the incomplete item with the given index as complete\n$ ./task help                 # Show usage\n$ ./task report               # Statistics`');
