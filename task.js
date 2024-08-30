@@ -246,6 +246,50 @@ function handleMarkAsDone(args) {
     }
 }
 
+//Function to show report of tasks
+function handleReport() {
+
+    // reading both files to get pending and completed tasks
+    let pendingTasks = [];
+    let completedTasks = [];
+    try {
+
+        if (fs.existsSync(TasksFilePath)) {//Check for the file if it exists or not
+            const fileContent = fs.readFileSync(TasksFilePath, 'utf-8');
+            pendingTasks = fileContent
+                .split("\n")
+                .filter(line => line.trim() != '')
+                .map(line => {
+                    const [p, ...t] = line.split(" ") //Spliting Priority and task by space
+                    return { priority: parseInt(p, 10), task: t.join(' ') };
+                });
+        }
+        if (fs.existsSync(CompletedTasksFilePath)) {
+            const fileContent = fs.readFileSync(CompletedTasksFilePath, 'utf-8');
+            completedTasks = fileContent
+                .split("\n")
+                .filter(line => line.trim() != '')
+                .map(line => {
+                    const [p, ...t] = line.split(" ") //Spliting Priority and task by space
+                    return { priority: parseInt(p, 10), task: t.join(' ') };
+                });
+        }
+    } catch (error) {
+        console.log("Error while Reading File: ", error);
+    }
+
+    //Logging results
+    console.log(`Pending : ${pendingTasks.length}`);
+    for (let i = 0; i < pendingTasks.length; i++) {
+        console.log(`${i + 1}. ${pendingTasks[i].task} [${pendingTasks[i].priority}]`)
+    }
+
+    console.log(`\nCompleted : ${completedTasks.length}`);
+    for (let i = 0; i < completedTasks.length; i++) {
+        console.log(`${i + 1}. ${completedTasks[i].task}`)
+    }
+}
+
 //This function will handle the input from the CLI
 function handleCLICommands(command, args) {
     // console.log("command: ", command);
@@ -267,6 +311,9 @@ function handleCLICommands(command, args) {
             break;
         case "done":
             handleMarkAsDone(args);
+            break;
+        case "report":
+            handleReport();
             break;
         default:
             console.log('Usage :-\n$ ./task add 2 hello world    # Add a new item with priority 2 and text "hello world" to the list\n$ ./task ls                   # Show incomplete priority list items sorted by priority in ascending order\n$ ./task del INDEX            # Delete the incomplete item with the given index\n$ ./task done INDEX           # Mark the incomplete item with the given index as complete\n$ ./task help                 # Show usage\n$ ./task report               # Statistics`');
