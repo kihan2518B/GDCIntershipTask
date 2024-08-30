@@ -70,7 +70,6 @@ function HandleAddTask(args) {
         console.log("Error while adding task to file: ", error);
     }
 
-    // console.log("priority,task", priority, task);
 }
 
 //Function to list the tasks order wise
@@ -100,7 +99,58 @@ function handleListTask() {
 
     //logging the tasks in formated manner
     for (let i = 0; i < tasks.length; i++) {
-        console.log(`${i+1}. ${tasks[i].task} [${tasks[i].priority}]`);
+        console.log(`${i + 1}. ${tasks[i].task} [${tasks[i].priority}]`);
+    }
+}
+
+// Handle Delete of the task
+function handleDeleteTask(args) {
+    const index = parseInt(args[0], 10)
+    // console.log("index: ", index);
+
+    if (!args[0]) {
+        console.log("Error: Missing NUMBER for deleting tasks.");
+        return;
+    }
+
+    //First reading the file
+    let tasks = [];
+    try {
+
+        if (fs.existsSync(TasksFilePath)) {//Check for the file if it exists or not
+            const fileContent = fs.readFileSync(TasksFilePath, 'utf-8');
+            tasks = fileContent
+                .split("\n")
+                .filter(line => line.trim() != '')
+                .map(line => {
+                    const [p, ...t] = line.split(" ") //Spliting Priority and task by space
+                    return { priority: parseInt(p, 10), task: t.join(' ') };
+                });
+        }
+    } catch (error) {
+        console.log("Error while Reading task.txt: ", error);
+    }
+
+    //Checks for non existing tasks
+    if (index == 0 || index > tasks.length) {
+        console.log(`Error: task with index #${index} does not exist. Nothing deleted.`);
+        return;
+    }
+
+    //Filtering task and removing the task with required index
+    const newTasks = tasks.filter((task, idx) => idx != index - 1);
+
+    //Converting newtasks array to the formate of task to write in the file
+    const UpdatedTasksContent = newTasks
+        .map(t => `${t.priority} ${t.task}`)
+        .join('\n');
+
+    try {
+        //Overwritting the file with updated content
+        fs.writeFileSync(TasksFilePath, UpdatedTasksContent);
+        console.log(`Deleted task #${index}`)
+    } catch (error) {
+        console.log("Error while adding task to file: ", error);
     }
 }
 
@@ -120,6 +170,9 @@ function handleCLICommands(command, args) {
             break;
         case "ls":
             handleListTask();
+            break;
+        case "del":
+            handleDeleteTask(args);
             break;
         default:
             console.log('Usage :-\n$ ./task add 2 hello world    # Add a new item with priority 2 and text "hello world" to the list\n$ ./task ls                   # Show incomplete priority list items sorted by priority in ascending order\n$ ./task del INDEX            # Delete the incomplete item with the given index\n$ ./task done INDEX           # Mark the incomplete item with the given index as complete\n$ ./task help                 # Show usage\n$ ./task report               # Statistics`');
